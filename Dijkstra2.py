@@ -63,14 +63,16 @@ def gen_graph(cost_matrix):
                 g.addEdge(i,j,cost_matrix[i][j])
     return g
 
-cost_matrix = [[0, 4, 0, 0, 0, 0, 0, 8, 0],[4, 0, 8, 0, 0, 0, 0, 11, 0],[0, 8, 0, 7, 0, 4, 0, 0, 2],[0, 0, 7, 0, 9, 14, 0, 0, 0],[0, 0, 0, 9, 0, 10, 0, 0, 0],[0, 0, 4, 14, 10, 0, 2, 0, 0],[0, 0, 0, 0, 0, 2, 0, 1, 6],[8, 11, 0, 0, 0, 0, 1, 0, 7],[0, 0, 2, 0, 0, 0, 6, 7, 0]]
-#print(cost_matrix)
-g = gen_graph(cost_matrix)
-#print("Before Dijkstra-------------")
-#show_graph(g)
-dijkstra2(g,g.vertices[0])
-#print("After Dijkstra--------------")
-#show_graph(g)
-print(get_path(g,g.vertices[0],g.vertices[4]))
+def test_Dijkstra():
+    cost_matrix = [[0, 4, 0, 0, 0, 0, 0, 8, 0],[4, 0, 8, 0, 0, 0, 0, 11, 0],[0, 8, 0, 7, 0, 4, 0, 0, 2],[0, 0, 7, 0, 9, 14, 0, 0, 0],[0, 0, 0, 9, 0, 10, 0, 0, 0],[0, 0, 4, 14, 10, 0, 2, 0, 0],[0, 0, 0, 0, 0, 2, 0, 1, 6],[8, 11, 0, 0, 0, 0, 1, 0, 7],[0, 0, 2, 0, 0, 0, 6, 7, 0]]
+    #print(cost_matrix)
+    g = gen_graph(cost_matrix)
+    #print("Before Dijkstra-------------")
+    #show_graph(g)
+    dijkstra2(g,g.vertices[0])
+    #print("After Dijkstra--------------")
+    #show_graph(g)
+    print(get_path(g,g.vertices[0],g.vertices[4]))
+    return
 
 

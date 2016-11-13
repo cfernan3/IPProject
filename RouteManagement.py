@@ -1,5 +1,5 @@
-from Topo_Specs import switch_port_mac_dict as mac_dict,dpid_switch_number as sw_num,switch_port_mat, switch_number_dpid as sw_dpid
-from QoSApplication import switch_dict
+from Topo_Specs import switch_port_mac_dict as mac_dict,dpid_switch_number as sw_num,switch_port_mat, switch_number_dpid as sw_dpid, switch_dict
+#from QoSApplication import switch_dict
 
 class RouteManagement():
     flow_counter = 0
