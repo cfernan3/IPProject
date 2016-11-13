@@ -1,5 +1,6 @@
 from Topo_Specs import switch_port_mac_dict as mac_dict,dpid_switch_number as sw_num,switch_port_mat, switch_number_dpid as sw_dpid, switch_dict
 #from QoSApplication import switch_dict
+from Dijkstra2 import test_Dijkstra as tD
 
 class RouteManagement():
     flow_counter = 0
@@ -13,9 +14,11 @@ class RouteManagement():
                 try: egress_cost != ingress_cost
                 except: "Ingress and Egress cost not equal on Egress Switch='"+egress_sw+"' and Ingress Switch='"+ingress_sw+"'"
                 else: self.cost_matrix[sw_num[egress_sw]][sw_num[ingress_sw]] = egress_cost
+                ##Check this function
 
     def calculatePath(self):
-
+        path = tD()
+        flows = self.createFlow(path)
 
     def createFlow(self, path):
         flows = []
