@@ -10,7 +10,6 @@ class Graph2(Graph):
         self.vertices[f].addNeighbor(self.vertices[t],cost)
         self.vertices[t].addNeighbor(self.vertices[f],cost)
 
-
 def get_path(aGraph, source, dest):
     cur_node = dest
     path = list([dest.id])

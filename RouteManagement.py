@@ -40,8 +40,8 @@ class RouteManagement():
         for i in range(dst):
             forward_flow_egress_port = switch_port_mat[path[i]][path[i+1]]
             backward_flow_egress_port = switch_port_mat[path[i+1]][path[i]]
-            dst_ingress_port_mac = switch_dict[sw_dpid[path[dst]]]['port'][switch_port_mat[path[dst]][path[dst-1]]]['mac']
-            src_egress_port_mac = switch_dict[sw_dpid[path[0]]]['port'][switch_port_mat[path[0]][path[1]]]['mac']
+            dst_ingress_port_mac = mac_dict[sw_dpid[path[-1]]][switch_port_mat[path[dst]][path[-2]]]
+            src_egress_port_mac = mac_dict[sw_dpid[path[0]]][switch_port_mat[path[0]][path[1]]]
             forward_flow = '{"switch":"'+sw_dpid[path[i]]+'","name":"'+str(self.flow_counter)+'", "eth_dst":"'+dst_ingress_port_mac+'", "actions":"output="'+forward_flow_egress_port+'"}'
             self.flow_counter += 1
             backward_flow = '{"switch":"'+sw_dpid[path[i+1]]+'","name":"'+str(self.flow_counter)+'", "eth_dst":"'+src_egress_port_mac+'", "actions":"output="'+backward_flow_egress_port+'"}'
@@ -54,13 +54,13 @@ class RouteManagement():
         #Asumming flows to be a list of flow dictionaries, each dictionary having two keys, switch name and flow string
         for switch in flows.keys():
             for flow in flows[switch]:
-                requests.post(flow_pusher_url, params={})
+                r = requests.post(flow_pusher_url, data = json.dumps(flow))
                 #Push flow here
-        return
+        return r
 
     def program_run(self,interval):
         global t
-        t = Timer(interval, self.program_run(interval))
+        t = Timer(interval, self.program_run, args=[interval])
         t.daemon = True
         t.start()
         route_manager = RouteManagement()
@@ -75,12 +75,12 @@ class RouteManagement():
         min_cost_path = []
         min_cost  = 10000
         Dmax=6
-        for path in path_list[src][dst]:
+        for path in path_list[sw_dpid[src]][sw_dpid[dst]]:
             cost = 0
             for i in range(len(path) - 1):
-                egress_sw = sw_dpid[path[i]]
-                ingress_sw = sw_dpid[path[i + 1]]
-                cost += switch_dict[egress_sw]['port'][switch_port_mat[sw_num[egress_sw]][sw_num[ingress_sw]]][
+                egress_sw = path[i]
+                ingress_sw = path[i + 1]
+                cost += switch_dict[sw_dpid[egress_sw]]['ports'][switch_port_mat[egress_sw][ingress_sw]][
                     'link_util']
                 cost += 1
             if cost< min_cost and (len(path)-1)< Dmax:
@@ -92,5 +92,7 @@ class RouteManagement():
             return "No path found"
 
 
-route_manager = RouteManagement()
-route_manager.program_run(5)
+if __name__ == "__main__":
+    # stuff only to run when not called via 'import' here
+    route_manager = RouteManagement()
+    route_manager.program_run(5)
