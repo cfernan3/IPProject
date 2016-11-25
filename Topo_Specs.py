@@ -12,7 +12,12 @@ switch_port_mat = [[0,'port2','port3'],
                    ['port5',0,'port6'],
                    ['port4','port1',0]]
 
+#dictionary of switches with key = dpid
+global switch_dict
+switch_dict = {}
 
+global paths
+paths = {}
 
 
 
