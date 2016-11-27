@@ -124,9 +124,10 @@ def stats_collector():
 
 # A class to manage all the works, related to routes
 class RouteManagement():
-    flow_counter = 0
+    #Give every flow a new name based on a counter
+    flow_counter = 0 
     cost_matrix = []
-    t = None    #thread
+    t = None    #set a thread handle outside the function scope to be able to control thread from outside
     
     #Calculate the best Dijkstra path
     def calculatePath(self):
@@ -135,19 +136,24 @@ class RouteManagement():
         self.flowPusher(flows)
         return
     
-    #Create flows permitted in the REST API 
+    #Create flows compatible with the REST API 
     def createFlow(self, path):
         flows = defaultdict(list)
         dst = len(path)-1
         for i in range(dst):
+            #Egress port and Ingress port are stored in the switch_port_mat
+            #Using an already stored data in switch_port_mat
             forward_flow_egress_port = switch_port_mat[path[i]][path[i+1]]
             backward_flow_egress_port = switch_port_mat[path[i+1]][path[i]]
+            #Forward flow = flow along the path
+            #IP DSCP and ETH Type allow us to categorize flows as qos flows
             forward_flow1 = '{"switch":"'+sw_dpid[path[i]]+'","name":"'+str(self.flow_counter)+'", "eth_dst":"fa:16:3e:00:7a:32", "eth_type":"0x0800", "ip_dscp":"40", "actions":"output='+forward_flow_egress_port+'"}'
             self.flow_counter += 1
             forward_flow2 = '{"switch":"' + sw_dpid[path[i]] + '","name":"' + str(self.flow_counter) + '", "eth_dst":"fa:16:3e:00:7a:32",  "actions":"output=' + forward_flow_egress_port + '"}'
             self.flow_counter += 1
             #print "forward flow: src=",path[i],", dst=",path[i+1],", flow = ",forward_flow1
             #print "forward flow: src=",path[i],", dst=",path[i+1],", flow = ",forward_flow2
+            #Backward flow = flow along reverse of the path, needed to setup a two-way connection
             backward_flow1 = '{"switch":"'+sw_dpid[path[i+1]]+'","name":"'+str(self.flow_counter)+'", "eth_dst":"fa:16:3e:00:44:1f", "eth_type":"0x0800", "ip_dscp":"40", "actions":"output='+backward_flow_egress_port+'"}'
             self.flow_counter += 1
             backward_flow2 = '{"switch":"'+sw_dpid[path[i+1]]+'","name":"'+str(self.flow_counter)+'", "eth_dst":"fa:16:3e:00:44:1f", "actions":"output='+backward_flow_egress_port+'"}'
@@ -166,11 +172,13 @@ class RouteManagement():
 
     # Include the endpoints - Client, Multimedia Servers, Traffic Generators in the flows
     def createEndpointFlow(self,src,dst):
+        #Adding the flows for endpoints separately to keep them out of routing graph
         flows = defaultdict(list)
         flow1 = '{"switch":"00:00:22:67:d7:d5:d4:48","name":"0", "eth_dst":"fa:16:3e:00:44:1f", "eth_type":"0x0800", "ip_dscp":"40", "actions":"output=4"}'
         flow2 = '{"switch":"00:00:22:67:d7:d5:d4:48","name":"1", "eth_dst":"fa:16:3e:00:44:1f", "actions":"output=4"}'
         flows[sw_dpid[src]].append(flow1)
         flows[sw_dpid[src]].append(flow2)
+        #Leaving Multimedia server2 out of QoS categorization
         flow = '{"switch":"00:00:22:67:d7:d5:d4:48","name":"2", "eth_dst":"fa:16:3e:00:7f:f0", "actions":"output=2"}'
         flows[sw_dpid[src]].append(flow)
         flow1 = '{"switch": "00:00:da:e7:78:d1:30:44", "name": "3", "eth_dst": "fa:16:3e:00:7a:32", "eth_type":"0x0800", "ip_dscp":"40", "actions": "output=2"}'
