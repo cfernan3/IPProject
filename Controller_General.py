@@ -6,22 +6,22 @@ import time
 import threading
 import thread
 
-#from RouteManagement import RouteManagement
-# dictionary of switches with key = dpid
+# master dictionary of switches with key = dpid
 global switch_dict
 switch_dict = {}
 
-#from formerly route management.py
+#All the spcifications related to the topology are stored in Topo_Specs
 from Topo_Specs_General import switch_port_mac_dict as mac_dict,dpid_switch_number as sw_num,switch_port_mat, switch_number_dpid as sw_dpid, switch_dict, paths as path_list
-#from QoSApplication import switch_dict
+
+
 from Dijkstra2 import test_Dijkstra as tD
 from threading import Timer
 from collections import defaultdict
-import requests
+
+# REST API  url to use in pushing flows
 flow_pusher_url = "http://127.0.0.1:8080/wm/staticentrypusher/json"
 
-def main():
-    # hello
+def stats_collector():
     # REST API call to get switch-details
     req_get_switch_details = requests.get('http://127.0.0.1:8080/wm/core/controller/switches/json')
     # parse json
@@ -55,23 +55,6 @@ def main():
    #     d = {'mac': mac, 'ip': ip}
    #     switch_dict[dpid]['ports'][port].update(d)
 
-    #print(switch_dict)
-
-
-    # input params: vertex id of both switches
-    '''def create_flow(a, b, port_matrix, dpid_arr, isQoS):
-            #actual stuff comented out to test
-            dpid_a = '00:00:ca:57:68:71:82:4f' #dpid_arr[a]
-            dpid_b = '00:00:ee:2c:ef:87:1f:46' #dpid_arr[b]
-            egress_port = '2' #port_matrix[a][b] #egress on switch a
-            ingress_port = '1' #port_matrix[b][a] #ingress on switch b
-            dest_mac = switch_dict[dpid_b]['ports'][ingress_port]['mac']
-            forward_flow = '{"switch":"'+dpid_a + '","name":"' + "test" + '", "eth_dst":"' + dest_mac +'", "actions":"output=' + egress_port +'"}'
-            return forward_flow
-        '''
-
-    # flow = create_flow(1,3,[], [], False)
-    # print(flow)
 
     # computes bandwidth utilization and updates the value of 'bandwodth_utilization' in the switch_dict for every port of every switch
     def computeStats():
@@ -131,22 +114,6 @@ def main():
                 computeStats()
                 count += 1
 
-    class FlowManager():
-        flow_dict = {}
-
-        def push_flow(self, flow):
-            # push a flow
-            r = requests.post('http://127.0.0.1:8080/wm/staticentrypusher/json', data=flow)
-            print r
-
-        def update_flow(self, list):
-            for flow in list:
-                push_flow(flow)
-
-        def clear_flow(self, switch):
-            # clear all flows on the switch
-            r = requests.get('http://127.0.0.1:8080/wm/staticentrypusher/clear/' + switch + '/json')
-
     stat_collector_thread = StatsManager(1)
     stat_collector_thread.daemon = True
     stat_collector_thread.start()
@@ -154,50 +121,27 @@ def main():
     while True:
         time.sleep(1)
 
-    # flow_manager = FlowManager()
-    # flow = '{"switch":"00:00:ca:57:68:71:82:4f","name":"flow-mod-1", "active":"true", "eth_dst":"fa:16:3e:00:4a:ca", "actions":"output=2"}'
-    switch = '00:00:92:15:ed:4f:ff:49'
-    # flow_manager.clear_flow(switch)
-    # flow_manager.push_flow(flow)
 
-    # flow_manager.clear_flow(switch)
-
+# A class to manage all the works, related to routes
 class RouteManagement():
     flow_counter = 0
     cost_matrix = []
     t = None    #thread
-
-    def createCostMatrix(self):
-        try: #Check if sw_num and switch_dict exist
-            switch_dict and sw_num
-        except:
-            print("Check switch topology specs. Something missing.")
-            return
-        for egress_sw in sw_num:
-            for ingress_sw in sw_num:
-                egress_cost = switch_dict[egress_sw]['port'][switch_port_mat[sw_num[egress_sw]][sw_num[ingress_sw]]]['bandwidth']
-                ingress_cost = switch_dict[ingress_sw]['port'][switch_port_mat[sw_num[ingress_sw]][sw_num[egress_sw]]]['bandwidth']
-                try: egress_cost != ingress_cost
-                except:
-                    print("Ingress and Egress cost not equal on Egress Switch='"+egress_sw+"' and Ingress Switch='"+ingress_sw+"'")
-                    break
-                else: self.cost_matrix[sw_num[egress_sw]][sw_num[ingress_sw]] = egress_cost
-                ##Check this function
-
+    
+    #Calculate the best Dijkstra path
     def calculatePath(self):
         path = tD()
         flows = self.createFlow(path)
         self.flowPusher(flows)
         return
-
+    
+    #Create flows permitted in the REST API 
     def createFlow(self, path):
         flows = defaultdict(list)
         dst = len(path)-1
         for i in range(dst):
             forward_flow_egress_port = switch_port_mat[path[i]][path[i+1]]
             backward_flow_egress_port = switch_port_mat[path[i+1]][path[i]]
-            #dst_ingress_port_mac = mac_dict[sw_dpid[path[-1]]][switch_port_mat[path[-1]][path[-2]]]
-            #src_egress_port_mac = mac_dict[sw_dpid[path[0]]][switch_port_mat[path[0]][path[1]]]
             forward_flow1 = '{"switch":"'+sw_dpid[path[i]]+'","name":"'+str(self.flow_counter)+'", "eth_dst":"fa:16:3e:00:7a:32", "eth_type":"0x0800", "ip_dscp":"40", "actions":"output='+forward_flow_egress_port+'"}'
             self.flow_counter += 1
             forward_flow2 = '{"switch":"' + sw_dpid[path[i]] + '","name":"' + str(self.flow_counter) + '", "eth_dst":"fa:16:3e:00:7a:32",  "actions":"output=' + forward_flow_egress_port + '"}'
@@ -220,6 +164,7 @@ class RouteManagement():
             flows[sw_dpid[path[i+1]]].append(backward_flow3)
         return flows
 
+    # Include the endpoints - Client, Multimedia Servers, Traffic Generators in the flows
     def createEndpointFlow(self,src,dst):
         flows = defaultdict(list)
         flow1 = '{"switch":"00:00:22:67:d7:d5:d4:48","name":"0", "eth_dst":"fa:16:3e:00:44:1f", "eth_type":"0x0800", "ip_dscp":"40", "actions":"output=4"}'
@@ -235,7 +180,7 @@ class RouteManagement():
         self.flow_counter+=5
         return flows
 
-
+    #Push the flows via the REST API
     def flowPusher(self, flows):
         #Asumming flows to be a list of flow dictionaries, each dictionary having two keys, switch name and flow string
         for switch in flows.keys():
@@ -245,6 +190,7 @@ class RouteManagement():
                 #Push flow here
         return r
 
+    #Create Route Management a running process
     def program_run(self,interval):
         global t
         t = Timer(interval, self.program_run, args=[interval])
@@ -253,11 +199,13 @@ class RouteManagement():
         route_manager = RouteManagement()
         route_manager.createCostMatrix()
         route_manager.calculatePath()
-
+    
+    #A handle to stop the route manager when from outside
     def program_stop(self):
         self.t.cancel()
         print("Stopping Route Manager ...")
 
+    #Calculate minimum cost routes, where cost = modified cost
     def FCpath(self,switch_dict, src, dst): #Dmax = length of longest path i.e. maximum number of hops
         #print switch_dict
         min_cost_path = []
@@ -287,11 +235,10 @@ class RouteManagement():
             return "No path found"
 
 
-
 if __name__ == "__main__":
     # stuff only to run when not called via 'import' here
     route_manager = RouteManagement()
-    thread.start_new_thread(main,())
+    thread.start_new_thread(stats_collector,())
     time.sleep(10)
     endpoint_flows = route_manager.createEndpointFlow(0, 3)
     r = route_manager.flowPusher((endpoint_flows))
